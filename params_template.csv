@@ -1,0 +1,41 @@
+parameter,label,type,defaultValue,options,start,end,step
+quickSettingsPreset,⚙️ Quick Settings Preset,select,AKGC1,Custom|AKGC1|AKSIL1,AKGC1,AKGC1,1
+breakevenTriggerTicks,⚖️ Breakeven Trigger Ticks,numeric,5,,5,5,1
+tickTPDistance,📏 Tick TP Distance,numeric,15,,15,15,1
+stopLossMode,🛑 Stop Loss Mode,select,Trailing SL,,Trailing SL,Trailing SL,1
+fixedSLDistanceTicks,📏 Fixed SL Distance (Ticks),numeric,180,,180,180,1
+trailTriggerTicks,🎯 Trail Trigger (Ticks),numeric,15,,15,15,1
+trailStepSizeTicks,📊 Trail Step Size (Ticks),numeric,15,,15,15,1
+hTFSentimentTimeframe,🧭 HTF Sentiment Timeframe,select,30 minutes,,30 minutes,30 minutes,1
+positionSize,📊 Position Size,numeric,2,,2,2,1
+dailyProfitTarget,📈 Daily Profit Target ($),numeric,700,,700,700,1
+dailyLossLimit,📉 Daily Loss Limit ($),numeric,200,,200,200,1
+enableMAXTP,🚀 Enable MAX TP,checkbox,false,,false,false,1
+enableTPProtection,🛡️ Enable TP Protection,checkbox,false,,false,false,1
+enableFastTP,⚡ Enable Fast TP,checkbox,false,,false,false,1
+enableBreakevenStop,⚖️ Enable Breakeven Stop,checkbox,false,,false,false,1
+exitAtSessionEnd,🔄 Exit at Session End,checkbox,true,,true,true,1
+exitDuringBlackout,🚫 Exit During Blackout,checkbox,false,,false,false,1
+enableTradingSessions,📅 Enable Trading Sessions,checkbox,true,,true,true,1
+includeNYSession,🌅 Include NY Session,checkbox,true,,true,true,1
+includeOvernightSession,🌙 Include Overnight Session,checkbox,false,,false,false,1
+enableTickTP,🎯 Enable Tick TP,checkbox,true,,true,true,1
+useMomentumFilter,🚀 Use Momentum Filter,checkbox,true,,true,true,1
+enableHTFSentiment,🧭 Enable HTF Sentiment,checkbox,true,,true,true,1
+enableBlackout1,⏰ Enable Blackout 1,checkbox,false,,false,false,1
+enableBlackout2,⏰ Enable Blackout 2,checkbox,false,,false,false,1
+enableBlackout3,⏰ Enable Blackout 3,checkbox,false,,false,false,1
+enableBlackout4,⏰ Enable Blackout 4,checkbox,false,,false,false,1
+enableBlackout5,⏰ Enable Blackout 5,checkbox,false,,false,false,1
+monSun1800Mon1700,Mon (Sun 1800→Mon 1700),checkbox,false,,false,false,1
+tueMon1800Tue1700,Tue (Mon 1800→Tue 1700),checkbox,false,,false,false,1
+wedTue1800Wed1700,Wed (Tue 1800→Wed 1700),checkbox,false,,false,false,1
+thuWed1800Thu1700,Thu (Wed 1800→Thu 1700),checkbox,false,,false,false,1
+friThu1800Fri1700,Fri (Thu 1800→Fri 1700),checkbox,false,,false,false,1
+sunSun1800Mon0300,Sun (Sun 1800→Mon 0300),checkbox,false,,false,false,1
+enableDailyLimits,💵 Enable Daily Limits,checkbox,true,,true,true,1
+showMomentumCandles,🕯️ Show Momentum Candles,checkbox,false,,false,false,1
+showLast10TradesTable,📋 Show Last 10 Trades Table,checkbox,true,,true,true,1
+showSessionStatsTable,📈 Show Session Stats Table,checkbox,true,,true,true,1
+restrictToBacktestRange,📅 Restrict To Backtest Range,checkbox,false,,false,false,1
+showBacktestDates,📅 Show Backtest Dates,checkbox,false,,false,false,1

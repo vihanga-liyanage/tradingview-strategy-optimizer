@@ -1,0 +1,30 @@
+{
+  "chartUrl": "https://www.tradingview.com/chart/QkJy13pu/",
+  "selectors": {
+    "strategyButton": "#\\:rn\\:",
+    "settingsMenuItem": "text=Settings…",
+    "inputsTab": "text=Inputs",
+    "okButton": "button:has-text('OK')",
+    "chartRangeButton": "#\\:rr\\:",
+    "last30DaysOption": "text=\"Last 30 days\"",
+    "updateReportButton": "button[data-qa-id=\"ui-lib-snackbar-action-button\"]"
+  },
+  "skipLabels": [
+    "🌍 Your Timezone",
+    "⏰ Blackout 1 Times",
+    "⏰ Blackout 2 Times",
+    "⏰ Blackout 3 Times",
+    "⏰ Blackout 4 Times",
+    "⏰ Blackout 5 Times",
+    "🟢 Profit Label Color",
+    "🔴 Loss Label Color",
+    "⚪ Label Text Color",
+    "📍 Label Position",
+    "📏 Label Offset (%)",
+    "📊 Table Display Type",
+    "📍 Table Position",
+    "📅 Backtest Start",
+    "📅 Backtest End",
+    "ℹ️ Version"
+  ]
+}

@@ -1,28 +1,9 @@
 const fs = require("fs");
 const { chromium } = require("playwright");
 
-const CHART_URL = "https://www.tradingview.com/chart/WNyI4Dwb/";
+const { chartUrl: CHART_URL, skipLabels: SKIP_LABELS } = JSON.parse(fs.readFileSync("config.json", "utf8"));
 const AUTH_FILE = "auth.json";
 const OUTPUT_FILE = "params_template.csv";
-
-const SKIP_LABELS = [
-  "🌍 Your Timezone",
-  "⏰ Blackout 1 Times",
-  "⏰ Blackout 2 Times",
-  "⏰ Blackout 3 Times",
-  "⏰ Blackout 4 Times",
-  "⏰ Blackout 5 Times",
-  "🟢 Profit Label Color",
-  "🔴 Loss Label Color",
-  "⚪ Label Text Color",
-  "📍 Label Position",
-  "📏 Label Offset (%)",
-  "📊 Table Display Type",
-  "📍 Table Position",
-  "📅 Backtest Start",
-  "📅 Backtest End",
-  "ℹ️ Version",
-];
 
 const DEBUG = true;
 

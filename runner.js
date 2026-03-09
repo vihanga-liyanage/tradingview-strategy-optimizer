@@ -2,7 +2,7 @@ const fs = require("fs");
 const csv = require("csv-parser");
 const { chromium } = require("playwright");
 
-const CHART_URL = "https://www.tradingview.com/chart/QkJy13pu/";
+const { chartUrl: CHART_URL, selectors: SELECTORS } = JSON.parse(fs.readFileSync("config.json", "utf8"));
 const PARAMS_FILE = "params.csv";
 const AUTH_FILE = "auth.json";
 
@@ -21,16 +21,6 @@ function getTimestamp() {
 }
 
 const RESULTS_FILE = `results_${getTimestamp()}.csv`;
-
-const SELECTORS = {
-  strategyButton: "#\\:rn\\:",
-  settingsMenuItem: "text=Settings…",
-  inputsTab: "text=Inputs",
-  okButton: "button:has-text('OK')",
-  chartRangeButton: "#\\:rr\\:",
-  last30DaysOption: 'text="Last 30 days"',
-  updateReportButton: 'button[data-qa-id="ui-lib-snackbar-action-button"]'
-};
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -175,7 +165,27 @@ function generateCombinations(paramRows) {
   return combos;
 }
 
-function ensureResultsHeader(paramRows) {
+async function readStaticParams(sweptParamNames) {
+  return new Promise((resolve, reject) => {
+    const rows = [];
+    fs.createReadStream("params_template.csv")
+      .pipe(csv())
+      .on("data", (row) => {
+        const name = String(row.parameter || "").trim();
+        if (name && !sweptParamNames.has(name)) {
+          rows.push({ parameter: name, defaultValue: String(row.defaultValue || "").trim() });
+        }
+      })
+      .on("end", () => resolve(rows))
+      .on("error", reject);
+  });
+}
+
+function ensureResultsHeader(paramRows, staticParams) {
+  const staticSection = staticParams
+    .map((p) => `${p.parameter}=${p.defaultValue}`)
+    .join(",");
+
   const header = [
     ...paramRows.map((p) => p.parameter),
     "netProfit",
@@ -185,7 +195,7 @@ function ensureResultsHeader(paramRows) {
     "profitFactor",
   ].join(",");
 
-  fs.writeFileSync(RESULTS_FILE, header + "\n");
+  fs.writeFileSync(RESULTS_FILE, staticSection + "\n" + header + "\n");
   debugLog(`Created results file: ${RESULTS_FILE}`);
 }
 
@@ -358,7 +368,7 @@ async function readPerformanceSummary(page) {
   await sleep(1500);
 
   return {
-    netProfit: await getMetricValue(page, "Total P&L"),
+    netProfit: (await getMetricValue(page, "Total P&L")).replace(/^\+/, ""),
     maxDrawdown: await getMetricValue(page, "Max equity drawdown"),
     totalTrades: await getMetricValue(page, "Total trades"),
     profitableTrades: await getMetricValue(page, "Profitable trades"),
@@ -394,9 +404,11 @@ async function main() {
   debugLog("Starting runner");
 
   const paramRows = await readParamRanges();
+  const sweptNames = new Set(paramRows.map((p) => p.parameter));
+  const staticParams = await readStaticParams(sweptNames);
   const combos = generateCombinations(paramRows);
 
-  ensureResultsHeader(paramRows);
+  ensureResultsHeader(paramRows, staticParams);
 
   debugLog("Launching browser. Headless = false");
   const browser = await chromium.launch({ headless: false });

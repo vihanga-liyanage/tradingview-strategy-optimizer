@@ -20,7 +20,9 @@ function getTimestamp() {
   [pad(d.getHours()), pad(d.getMinutes()), pad(d.getSeconds())].join("-");
 }
 
-const RESULTS_FILE = `results_${getTimestamp()}.csv`;
+const RESULTS_DIR = "results";
+if (!fs.existsSync(RESULTS_DIR)) fs.mkdirSync(RESULTS_DIR);
+const RESULTS_FILE = `${RESULTS_DIR}/results_${getTimestamp()}.csv`;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -80,7 +82,6 @@ async function readParamRanges() {
           parameter: String(row.parameter || "").trim(),
           label: String(row.label || "").trim(),
           type: String(row.type || "").trim().toLowerCase(),
-          defaultValue: String(row.defaultValue || "").trim(),
           options: String(row.options || "").trim(),
           start: String(row.start || "").trim(),
           end: String(row.end || "").trim(),
@@ -106,9 +107,7 @@ function getValuesForParam(p) {
     if (hasValue(p.start) && hasValue(p.end) && hasValue(p.step)) {
       return buildValues(Number(p.start), Number(p.end), Number(p.step));
     }
-    if (hasValue(p.defaultValue)) {
-      return [p.defaultValue];
-    }
+    if (hasValue(p.start)) return [p.start];
     return [];
   }
 
@@ -116,9 +115,7 @@ function getValuesForParam(p) {
     if (hasValue(p.options)) {
       return p.options.split("|").map(v => v.trim()).filter(Boolean);
     }
-    if (hasValue(p.defaultValue)) {
-      return [p.defaultValue];
-    }
+    if (hasValue(p.start)) return [p.start];
     return ["false"];
   }
 
@@ -126,9 +123,7 @@ function getValuesForParam(p) {
     if (hasValue(p.options)) {
       return p.options.split("|").map(v => v.trim()).filter(Boolean);
     }
-    if (hasValue(p.defaultValue)) {
-      return [p.defaultValue];
-    }
+    if (hasValue(p.start)) return [p.start];
     return [];
   }
 
@@ -165,15 +160,15 @@ function generateCombinations(paramRows) {
   return combos;
 }
 
-async function readStaticParams(sweptParamNames) {
+async function readStaticParams(allParamNames) {
   return new Promise((resolve, reject) => {
     const rows = [];
     fs.createReadStream("params_template.csv")
       .pipe(csv())
       .on("data", (row) => {
         const name = String(row.parameter || "").trim();
-        if (name && !sweptParamNames.has(name)) {
-          rows.push({ parameter: name, defaultValue: String(row.defaultValue || "").trim() });
+        if (name && !allParamNames.has(name)) {
+          rows.push({ parameter: name, value: String(row.start || "").trim() });
         }
       })
       .on("end", () => resolve(rows))
@@ -181,21 +176,33 @@ async function readStaticParams(sweptParamNames) {
   });
 }
 
-function ensureResultsHeader(paramRows, staticParams) {
-  const staticSection = staticParams
-    .map((p) => `${p.parameter}=${p.defaultValue}`)
-    .join(",");
+async function readChartInfo(page) {
+  const asset = await page.locator(SELECTORS.assetName).first().innerText();
+  const timeframe = await page.locator(SELECTORS.timeframe).first().innerText();
+  return { asset: asset.trim(), timeframe: timeframe.trim() };
+}
+
+function ensureResultsHeader(paramRows, staticParams, chartInfo) {
+  const MAX_COLS = 14;
+  const pairs = staticParams.flatMap((p) => [csvEscape(p.parameter), csvEscape(p.value)]);
+  const staticRows = [];
+  for (let i = 0; i < pairs.length; i += MAX_COLS) {
+    staticRows.push(pairs.slice(i, i + MAX_COLS).join(","));
+  }
+  const staticSection = staticRows.join("\n");
+
+  const chartInfoRow = [csvEscape("asset"), csvEscape(chartInfo.asset), csvEscape("timeframe"), csvEscape(chartInfo.timeframe)].join(",");
 
   const header = [
     ...paramRows.map((p) => p.parameter),
+    "totalTrades",
     "netProfit",
     "maxDrawdown",
-    "totalTrades",
     "profitableTrades",
     "profitFactor",
   ].join(",");
 
-  fs.writeFileSync(RESULTS_FILE, staticSection + "\n" + header + "\n");
+  fs.writeFileSync(RESULTS_FILE, chartInfoRow + "\n" + staticSection + "\n" + header + "\n");
   debugLog(`Created results file: ${RESULTS_FILE}`);
 }
 
@@ -379,9 +386,9 @@ async function readPerformanceSummary(page) {
 function appendResult(combo, metrics, paramRows) {
   const row = [
     ...paramRows.map((p) => combo[p.parameter]?.value ?? ""),
+    metrics.totalTrades,
     metrics.netProfit,
     metrics.maxDrawdown,
-    metrics.totalTrades,
     metrics.profitableTrades,
     metrics.profitFactor,
   ].map(csvEscape);
@@ -404,11 +411,13 @@ async function main() {
   debugLog("Starting runner");
 
   const paramRows = await readParamRanges();
-  const sweptNames = new Set(paramRows.map((p) => p.parameter));
-  const staticParams = await readStaticParams(sweptNames);
+  const allParamNames = new Set(paramRows.map((p) => p.parameter));
+  const variedParamRows = paramRows.filter((p) => getValuesForParam(p).length > 1);
+  const fixedParamRows = paramRows.filter((p) => getValuesForParam(p).length === 1);
+  const templateStaticParams = await readStaticParams(allParamNames);
+  const fixedFromParams = fixedParamRows.map((p) => ({ parameter: p.parameter, value: String(getValuesForParam(p)[0]) }));
+  const staticParams = [...fixedFromParams, ...templateStaticParams];
   const combos = generateCombinations(paramRows);
-
-  ensureResultsHeader(paramRows, staticParams);
 
   debugLog("Launching browser. Headless = false");
   const browser = await chromium.launch({ headless: false });
@@ -428,6 +437,10 @@ async function main() {
   await sleep(5000);
   await updateReportIfNeeded(page);
 
+  const chartInfo = await readChartInfo(page);
+  debugLog(`Chart info: asset=${chartInfo.asset}, timeframe=${chartInfo.timeframe}`);
+  ensureResultsHeader(variedParamRows, staticParams, chartInfo);
+
   console.log(`Total combinations: ${combos.length}`);
 
   for (let i = 0; i < combos.length; i++) {
@@ -441,7 +454,7 @@ async function main() {
       await applyCombo(page, combo);
 
       const metrics = await readPerformanceSummary(page);
-      appendResult(combo, metrics, paramRows);
+      appendResult(combo, metrics, variedParamRows);
 
       console.log(`Saved run ${runId}`);
       await sleep(1000);

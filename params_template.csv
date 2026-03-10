@@ -1,41 +1,84 @@
-parameter,label,type,defaultValue,options,start,end,step
-quickSettingsPreset,⚙️ Quick Settings Preset,select,AKGC1,Custom|AKGC1|AKSIL1,AKGC1,AKGC1,1
-breakevenTriggerTicks,⚖️ Breakeven Trigger Ticks,numeric,5,,5,5,1
-tickTPDistance,📏 Tick TP Distance,numeric,15,,15,15,1
-stopLossMode,🛑 Stop Loss Mode,select,Trailing SL,,Trailing SL,Trailing SL,1
-fixedSLDistanceTicks,📏 Fixed SL Distance (Ticks),numeric,180,,180,180,1
-trailTriggerTicks,🎯 Trail Trigger (Ticks),numeric,15,,15,15,1
-trailStepSizeTicks,📊 Trail Step Size (Ticks),numeric,15,,15,15,1
-hTFSentimentTimeframe,🧭 HTF Sentiment Timeframe,select,30 minutes,,30 minutes,30 minutes,1
-positionSize,📊 Position Size,numeric,2,,2,2,1
-dailyProfitTarget,📈 Daily Profit Target ($),numeric,700,,700,700,1
-dailyLossLimit,📉 Daily Loss Limit ($),numeric,200,,200,200,1
-enableMAXTP,🚀 Enable MAX TP,checkbox,false,,false,false,1
-enableTPProtection,🛡️ Enable TP Protection,checkbox,false,,false,false,1
-enableFastTP,⚡ Enable Fast TP,checkbox,false,,false,false,1
-enableBreakevenStop,⚖️ Enable Breakeven Stop,checkbox,false,,false,false,1
-exitAtSessionEnd,🔄 Exit at Session End,checkbox,true,,true,true,1
-exitDuringBlackout,🚫 Exit During Blackout,checkbox,false,,false,false,1
-enableTradingSessions,📅 Enable Trading Sessions,checkbox,true,,true,true,1
-includeNYSession,🌅 Include NY Session,checkbox,true,,true,true,1
-includeOvernightSession,🌙 Include Overnight Session,checkbox,false,,false,false,1
-enableTickTP,🎯 Enable Tick TP,checkbox,true,,true,true,1
-useMomentumFilter,🚀 Use Momentum Filter,checkbox,true,,true,true,1
-enableHTFSentiment,🧭 Enable HTF Sentiment,checkbox,true,,true,true,1
-enableBlackout1,⏰ Enable Blackout 1,checkbox,false,,false,false,1
-enableBlackout2,⏰ Enable Blackout 2,checkbox,false,,false,false,1
-enableBlackout3,⏰ Enable Blackout 3,checkbox,false,,false,false,1
-enableBlackout4,⏰ Enable Blackout 4,checkbox,false,,false,false,1
-enableBlackout5,⏰ Enable Blackout 5,checkbox,false,,false,false,1
-monSun1800Mon1700,Mon (Sun 1800→Mon 1700),checkbox,false,,false,false,1
-tueMon1800Tue1700,Tue (Mon 1800→Tue 1700),checkbox,false,,false,false,1
-wedTue1800Wed1700,Wed (Tue 1800→Wed 1700),checkbox,false,,false,false,1
-thuWed1800Thu1700,Thu (Wed 1800→Thu 1700),checkbox,false,,false,false,1
-friThu1800Fri1700,Fri (Thu 1800→Fri 1700),checkbox,false,,false,false,1
-sunSun1800Mon0300,Sun (Sun 1800→Mon 0300),checkbox,false,,false,false,1
-enableDailyLimits,💵 Enable Daily Limits,checkbox,true,,true,true,1
-showMomentumCandles,🕯️ Show Momentum Candles,checkbox,false,,false,false,1
-showLast10TradesTable,📋 Show Last 10 Trades Table,checkbox,true,,true,true,1
-showSessionStatsTable,📈 Show Session Stats Table,checkbox,true,,true,true,1
-restrictToBacktestRange,📅 Restrict To Backtest Range,checkbox,false,,false,false,1
-showBacktestDates,📅 Show Backtest Dates,checkbox,false,,false,false,1
+parameter,label,type,options,start,end,step
+quickSettingsPreset,⚙️ Quick Settings Preset,select,Custom|AKGC1|AKSIL1,AKGC1,AKGC1,1
+source,📊 Source,select,Open|High|Low|Close|(H + L)/2|(H + L + C)/3|(O + H + L + C)/4|(H + L + C + C)/4,Close,Close,1
+mAType,📈 MA Type,select,SMA|EMA|SMMA (RMA)|WMA|VWMA,SMA,SMA,1
+basisLength,📏 Basis Length,numeric,,41,41,1
+breakevenTriggerTicks,⚖️ Breakeven Trigger Ticks,numeric,,5,5,1
+rSILength,📊 RSI Length,numeric,,20,20,1
+bullishRSIThreshold,📈 Bullish RSI Threshold,numeric,,55,55,1
+bearishRSIThreshold,📉 Bearish RSI Threshold,numeric,,50,50,1
+eMALength,📏 EMA Length,numeric,,80,80,1
+rSIThreshold,📊 RSI Threshold,numeric,,50,50,1
+fibBBLength,📏 Fib BB Length,numeric,,200,200,1
+fibRatio,📊 Fib Ratio,numeric,,2.2,2.2,1
+minTicksFromTP,📏 Min Ticks From TP,numeric,,10,10,1
+entryFibAdjust,📐 Entry Fib Adjust,numeric,,0.9,0.9,1
+tickTPDistance,📏 Tick TP Distance,numeric,,15,15,1
+stopLossMode,🛑 Stop Loss Mode,select,,Trailing SL,Trailing SL,1
+fixedSLDistanceTicks,📏 Fixed SL Distance (Ticks),numeric,,150,150,1
+trailTriggerTicks,🎯 Trail Trigger (Ticks),numeric,,15,15,1
+trailStepSizeTicks,📊 Trail Step Size (Ticks),numeric,,15,15,1
+billyActiveSLTicks,🔫 Billy Active SL (Ticks),numeric,,50,50,1
+billyReferenceSLTicks,🔫 Billy Reference SL (Ticks),numeric,,300,300,1
+bBEMALength,📊 BB EMA Length,numeric,,9,9,1
+bBSMALength,📊 BB SMA Length,numeric,,20,20,1
+bBStdDevMultiplier,📊 BB StdDev Multiplier,numeric,,4,4,1
+hTFSentimentTimeframe,🧭 HTF Sentiment Timeframe,select,,15 minutes,15 minutes,1
+outputSmoothing,🧭 Output Smoothing,numeric,,29,29,1
+triggerSmoothing,🧭 Trigger Smoothing,numeric,,11,11,1
+aTRLength,🧭 ATR Length,numeric,,200,200,1
+rangeMultiplier,🧭 Range Multiplier,numeric,,7,7,1
+rangeStyle,🧭 Range Style,select,,Body,Body,1
+pivotPeriod,📊 Pivot Period,numeric,,10,10,1
+pivotSource,📊 Pivot Source,select,,High/Low,High/Low,1
+maxPivots,📊 Max Pivots,numeric,,20,20,1
+channelWidth,📊 Channel Width (%),numeric,,10,10,1
+maxLevels,📊 Max Levels,numeric,,5,5,1
+minStrength,📊 Min Strength,numeric,,2,2,1
+positionSize,📊 Position Size,numeric,,2,2,1
+multiplier,📊 Multiplier,numeric,,2,2,1
+maxLevels,🔢 Max Levels,numeric,,3,3,1
+maxTradesPerSession,📊 Max Trades Per Session,numeric,,5,5,1
+cooldownCandles,❄️ Cooldown Candles,numeric,,3,3,1
+dailyProfitTarget,📈 Daily Profit Target ($),numeric,,700,700,1
+dailyLossLimit,📉 Daily Loss Limit ($),numeric,,300,300,1
+enableMAXTP,🚀 Enable MAX TP,checkbox,,false,false,1
+enableTPProtection,🛡️ Enable TP Protection,checkbox,,false,false,1
+enableFastTP,⚡ Enable Fast TP,checkbox,,false,false,1
+enableBreakevenStop,⚖️ Enable Breakeven Stop,checkbox,,false,false,1
+exitAtSessionEnd,🔄 Exit at Session End,checkbox,,true,true,1
+exitDuringBlackout,🚫 Exit During Blackout,checkbox,,false,false,1
+useRestingExits,📋 Use Resting Exits,checkbox,,true,true,1
+showEntryBand,📊 Show Entry Band,checkbox,,false,false,1
+showTPExitBands,📊 Show TP/Exit Bands,checkbox,,false,false,1
+enableTradingSessions,📅 Enable Trading Sessions,checkbox,,true,true,1
+includeNYSession,🌅 Include NY Session,checkbox,,true,true,1
+includeOvernightSession,🌙 Include Overnight Session,checkbox,,false,false,1
+enableTickTP,🎯 Enable Tick TP,checkbox,,true,true,1
+enableBillySL,🔫 Enable Billy SL,checkbox,,true,true,1
+enableBBTPSL,📊 Enable BB TP/SL,checkbox,,false,false,1
+useMomentumFilter,🚀 Use Momentum Filter,checkbox,,true,true,1
+enableHTFSentiment,🧭 Enable HTF Sentiment,checkbox,,true,true,1
+doubleFilter,🧭 Double Filter,checkbox,,true,true,1
+enableSRExitFilter,📊 Enable S/R Exit Filter,checkbox,,false,false,1
+enableMartingale,🎲 Enable Martingale,checkbox,,false,false,1
+enableMaxSessionTrades,📊 Enable Max Session Trades,checkbox,,false,false,1
+enableTradeCooldown,❄️ Enable Trade Cooldown,checkbox,,false,false,1
+enableBlackout1,⏰ Enable Blackout 1,checkbox,,false,false,1
+enableBlackout2,⏰ Enable Blackout 2,checkbox,,false,false,1
+enableBlackout3,⏰ Enable Blackout 3,checkbox,,false,false,1
+enableBlackout4,⏰ Enable Blackout 4,checkbox,,false,false,1
+enableBlackout5,⏰ Enable Blackout 5,checkbox,,false,false,1
+monSun1800Mon1700,Mon (Sun 1800→Mon 1700),checkbox,,false,false,1
+tueMon1800Tue1700,Tue (Mon 1800→Tue 1700),checkbox,,false,false,1
+wedTue1800Wed1700,Wed (Tue 1800→Wed 1700),checkbox,,false,false,1
+thuWed1800Thu1700,Thu (Wed 1800→Thu 1700),checkbox,,false,false,1
+friThu1800Fri1700,Fri (Thu 1800→Fri 1700),checkbox,,false,false,1
+sunSun1800Mon0300,Sun (Sun 1800→Mon 0300),checkbox,,false,false,1
+enableDailyLimits,💵 Enable Daily Limits,checkbox,,true,true,1
+showMomentumCandles,🕯️ Show Momentum Candles,checkbox,,false,false,1
+showLast10TradesTable,📋 Show Last 10 Trades Table,checkbox,,true,true,1
+showSessionStatsTable,📈 Show Session Stats Table,checkbox,,true,true,1
+restrictToBacktestRange,📅 Restrict To Backtest Range,checkbox,,false,false,1
+showBacktestDates,📅 Show Backtest Dates,checkbox,,false,false,1
+debugMode,🛠️ Debug Mode,checkbox,,false,false,1

@@ -1,7 +1,7 @@
 const fs = require("fs");
 const { chromium } = require("playwright");
 
-const { chartUrl: CHART_URL, skipLabels: SKIP_LABELS } = JSON.parse(fs.readFileSync("config.json", "utf8"));
+const { chartUrl: CHART_URL, skipLabels: SKIP_LABELS, selectors: SELECTORS } = JSON.parse(fs.readFileSync("config.json", "utf8"));
 const AUTH_FILE = "auth.json";
 const OUTPUT_FILE = "params_template.csv";
 
@@ -17,27 +17,27 @@ function sleep(ms) {
 
 async function openStrategyInputs(page) {
   debugLog("Clicking strategy button");
-  await page.click("#\\:rp\\:");
+  await page.locator(SELECTORS.strategyButton).click();
   await sleep(1000);
 
   debugLog("Clicking Settings");
-  await page.getByText("Settings…", { exact: true }).click();
+  await page.locator(SELECTORS.settingsMenuItem).click();
   await sleep(1200);
 
   debugLog("Clicking Inputs");
-  await page.getByText("Inputs", { exact: true }).click();
+  await page.locator(SELECTORS.inputsTab).click();
   await sleep(1500);
 }
 
 async function closeDropdown(page) {
   debugLog("Closing dropdown by clicking Inputs tab");
-  await page.locator("text=Inputs").click();
+  await page.locator(SELECTORS.inputsTab).click();
   await sleep(500);
 }
 
 async function closeDropdown(page) {
   debugLog("Closing dropdown by clicking Inputs tab");
-  await page.locator("text=Inputs").click();
+  await page.locator(SELECTORS.inputsTab).click();
   await sleep(500);
 }
 
@@ -153,8 +153,8 @@ async function extractParams(page) {
         parameter,
         label,
         type,
-        defaultValue: value,
         options,
+        start: value,
       });
 
       seenLabels.add(label);
@@ -212,8 +212,8 @@ async function extractParams(page) {
         parameter,
         label,
         type: "checkbox",
-        defaultValue: value,
         options: "",
+        start: value,
       });
 
       seenLabels.add(label);
@@ -227,7 +227,7 @@ async function extractParams(page) {
 }
 
 function writeCsv(rows) {
-  const lines = ["parameter,label,type,defaultValue,options,start,end,step"];
+  const lines = ["parameter,label,type,options,start,end,step"];
 
   for (const row of rows) {
     lines.push(
@@ -235,10 +235,9 @@ function writeCsv(rows) {
         csvEscape(row.parameter),
         csvEscape(row.label),
         csvEscape(row.type),
-        csvEscape(row.defaultValue),
         csvEscape(row.options || ""),
-        csvEscape(row.defaultValue),
-        csvEscape(row.defaultValue),
+        csvEscape(row.start),
+        csvEscape(row.start),
         csvEscape("1")
       ].join(",")
     );

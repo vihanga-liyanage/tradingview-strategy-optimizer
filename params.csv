@@ -1,5 +1,5 @@
-parameter,label,type,defaultValue,options,start,end,step
-tickTPDistance,📏 Tick TP Distance,numeric,15,,30,30,5
-stopLossMode,🛑 Stop Loss Mode,select,Trailing SL,Trailing SL|Fixed Tick SL,Trailing SL,Trailing SL,0
-fixedSLDistanceTicks,📏 Fixed SL Distance (Ticks),numeric,180,,100,200,20
-enableDailyLimits,💵 Enable Daily Limits,checkbox,true,true|false,false,false,1
+parameter,label,type,options,start,end,step
+tickTPDistance,📏 Tick TP Distance,numeric,,30,30,5
+stopLossMode,🛑 Stop Loss Mode,select,Trailing SL,Trailing SL,Trailing SL,0
+fixedSLDistanceTicks,📏 Fixed SL Distance (Ticks),numeric,,30,50,10
+enableDailyLimits,💵 Enable Daily Limits,checkbox,false,false,false,1

@@ -1,11 +1,11 @@
 {
-  "chartUrl": "https://www.tradingview.com/chart/D1XGeu06/",
+  "chartUrl": "https://www.tradingview.com/chart/cNrWS3nV/",
   "selectors": {
-    "strategyButton": "#\\:rr\\:",
+    "strategyButton": "button[data-strategy-title]",
     "settingsMenuItem": "text=Settings…",
     "inputsTab": "text=Inputs",
     "okButton": "button:has-text('OK')",
-    "chartRangeButton": "#\\:rv\\:",
+    "chartRangeButton": "button[aria-controls][aria-haspopup='menu']:not([data-strategy-title]):not([aria-label]):not([data-name])",
     "last30DaysOption": "text=\"Last 30 days\"",
     "updateReportButton": "button[data-qa-id=\"ui-lib-snackbar-action-button\"]",
     "assetName": "button[aria-label='Change symbol']",

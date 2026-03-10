@@ -5,6 +5,7 @@ const { chromium } = require("playwright");
 const { chartUrl: CHART_URL, selectors: SELECTORS } = JSON.parse(fs.readFileSync("config.json", "utf8"));
 const PARAMS_FILE = "params.csv";
 const AUTH_FILE = "auth.json";
+const RESUME_FILE = process.argv[2] || null;
 
 const DEBUG = true;
 
@@ -22,7 +23,7 @@ function getTimestamp() {
 
 const RESULTS_DIR = "results";
 if (!fs.existsSync(RESULTS_DIR)) fs.mkdirSync(RESULTS_DIR);
-const RESULTS_FILE = `${RESULTS_DIR}/results_${getTimestamp()}.csv`;
+const RESULTS_FILE = RESUME_FILE || `${RESULTS_DIR}/results_${getTimestamp()}.csv`;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -32,12 +33,74 @@ function debugLog(...args) {
   if (DEBUG) console.log("[DEBUG]", ...args);
 }
 
+function parseCsvLine(line) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+  for (const ch of line) {
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === "," && !inQuotes) {
+      result.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
 function csvEscape(value) {
   const s = String(value ?? "");
   if (s.includes(",") || s.includes('"') || s.includes("\n")) {
     return `"${s.replace(/"/g, '""')}"`;
   }
   return s;
+}
+
+function comboKey(combo, variedParamRows) {
+  return variedParamRows.map((p) => String(combo[p.parameter]?.value ?? "")).join("|");
+}
+
+function loadExistingResults(filePath, variedParamRows) {
+  if (!filePath) return new Set();
+
+  const content = fs.readFileSync(filePath, "utf8");
+  const lines = content.trim().split("\n");
+
+  // Find the data header row — it contains "totalTrades"
+  let headerIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes("totalTrades")) {
+      headerIdx = i;
+      break;
+    }
+  }
+
+  if (headerIdx === -1) {
+    console.warn(`Warning: could not find header row in ${filePath} — no runs will be skipped`);
+    return new Set();
+  }
+
+  const headers = parseCsvLine(lines[headerIdx]);
+  const paramIndices = variedParamRows.map((p) => headers.indexOf(p.parameter));
+
+  if (paramIndices.some((idx) => idx === -1)) {
+    console.warn("Warning: some parameters not found in resume file headers — no runs will be skipped");
+    return new Set();
+  }
+
+  const done = new Set();
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const cols = parseCsvLine(line);
+    const key = paramIndices.map((idx) => cols[idx] ?? "").join("|");
+    done.add(key);
+  }
+
+  return done;
 }
 
 function normalizeBool(value) {
@@ -452,13 +515,21 @@ async function main() {
 
   const chartInfo = await readChartInfo(page);
   debugLog(`Chart info: asset=${chartInfo.asset}, timeframe=${chartInfo.timeframe}`);
-  ensureResultsHeader(variedParamRows, staticParams, chartInfo);
+  if (!RESUME_FILE) ensureResultsHeader(variedParamRows, staticParams, chartInfo);
+
+  const existingResults = loadExistingResults(RESUME_FILE, variedParamRows);
+  if (RESUME_FILE) console.log(`Resuming from ${RESUME_FILE} — ${existingResults.size} existing result(s) will be skipped`);
 
   console.log(`Total combinations: ${combos.length}`);
 
   for (let i = 0; i < combos.length; i++) {
     const combo = combos[i];
     const runId = i + 1;
+
+    if (existingResults.has(comboKey(combo, variedParamRows))) {
+      debugLog(`Skipping run ${runId} — already in results`);
+      continue;
+    }
 
     try {
       console.log(`Run ${runId}/${combos.length}`);

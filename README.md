@@ -73,7 +73,15 @@ See the [CSV Configuration](#csv-configuration) section below for the full forma
 node runner.js
 ```
 
-A browser window will open and the tool will work through all parameter combinations automatically. Results are saved to a file named `results_YYYY-MM-DD_HH-MM-SS.csv` in the same directory.
+A browser window will open and the tool will work through all parameter combinations automatically. Results are saved to a timestamped file in the `results/` directory.
+
+#### Resuming an interrupted run
+
+If a long run is interrupted, pass the partial results file as an argument. The runner will skip any combinations already recorded in it and append the missing results directly to the same file:
+
+```bash
+node runner.js results/results_2026-03-09_21-52-59.csv
+```
 
 ---
 
@@ -161,7 +169,9 @@ sweptParam1,sweptParam2,...,netProfit,maxDrawdown,totalTrades,profitableTrades,p
    - Clicks OK and waits for the backtest to update.
    - Reads the five metrics from the Performance Summary panel.
    - Appends a row to the results CSV.
-7. If a run fails, a screenshot is saved as `debug-failed-run-N.png` and the loop continues with the next combination.
+7. If a run fails, a screenshot is saved as `debug-failed-run-N.png`.
+   - If a "session disconnected" overlay appears, the tool automatically clicks **Connect**, waits for reconnection, and retries the failed run once before moving on.
+   - Otherwise the loop continues with the next combination.
 
 ---
 
@@ -170,5 +180,7 @@ sweptParam1,sweptParam2,...,netProfit,maxDrawdown,totalTrades,profitableTrades,p
 - **Total combinations** = product of value counts across all swept parameters. Check the console output at startup before a large run.
 - **Debug logging** is enabled by default (`DEBUG = true` in `runner.js`). Set it to `false` to reduce console noise.
 - If TradingView prompts you to "Update report", the tool handles this automatically.
+- If TradingView shows a "session disconnected" overlay, the tool clicks **Connect** and retries the current run automatically.
 - The session in `auth.json` will eventually expire. Re-run `node save-session.js` to refresh it.
 - Do not interact with the browser window while the tool is running.
+- To resume an interrupted run, pass the partial results file as a command-line argument (see [Resuming an interrupted run](#resuming-an-interrupted-run) above).

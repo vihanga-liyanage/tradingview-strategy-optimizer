@@ -1,9 +1,11 @@
 {
   "name": "trading-view-strategy-optimizer",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "runner.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node runner.js",
+    "extract": "node extract-params.js",
+    "login": "node save-session.js"
   },
   "keywords": [],
   "author": "",

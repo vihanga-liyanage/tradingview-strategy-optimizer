@@ -2,10 +2,24 @@ const fs = require("fs");
 const csv = require("csv-parser");
 const { chromium } = require("playwright");
 
-const { chartUrl: CHART_URL, selectors: SELECTORS } = JSON.parse(fs.readFileSync("config.json", "utf8"));
+const config = JSON.parse(fs.readFileSync("config.json", "utf8"));
+const CHART_URL = config.chartUrl;
+const SELECTORS = config.selectors;
+const CONDITIONS = config.conditions || {};
 const PARAMS_FILE = "params.csv";
 const AUTH_FILE = "auth.json";
-const RESUME_FILE = process.argv[2] || null;
+
+const SAMPLE_SIZE = (() => {
+  const idx = process.argv.indexOf("--sample");
+  if (idx !== -1 && process.argv[idx + 1]) return parseInt(process.argv[idx + 1]);
+  return null;
+})();
+
+const RESUME_FILE = (() => {
+  const idx = process.argv.indexOf("--resume");
+  if (idx !== -1 && process.argv[idx + 1]) return process.argv[idx + 1];
+  return null;
+})();
 
 const DEBUG = true;
 
@@ -21,9 +35,13 @@ function getTimestamp() {
   [pad(d.getHours()), pad(d.getMinutes()), pad(d.getSeconds())].join("-");
 }
 
-const RESULTS_DIR = "results";
-if (!fs.existsSync(RESULTS_DIR)) fs.mkdirSync(RESULTS_DIR);
-const RESULTS_FILE = RESUME_FILE || `${RESULTS_DIR}/results_${getTimestamp()}.csv`;
+let RESULTS_FILE = `results_${getTimestamp()}.csv`;
+
+function formatDuration(seconds) {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -31,24 +49,6 @@ function sleep(ms) {
 
 function debugLog(...args) {
   if (DEBUG) console.log("[DEBUG]", ...args);
-}
-
-function parseCsvLine(line) {
-  const result = [];
-  let current = "";
-  let inQuotes = false;
-  for (const ch of line) {
-    if (ch === '"') {
-      inQuotes = !inQuotes;
-    } else if (ch === "," && !inQuotes) {
-      result.push(current);
-      current = "";
-    } else {
-      current += ch;
-    }
-  }
-  result.push(current);
-  return result;
 }
 
 function csvEscape(value) {
@@ -59,69 +59,12 @@ function csvEscape(value) {
   return s;
 }
 
-function comboKey(combo, variedParamRows) {
-  return variedParamRows.map((p) => String(combo[p.parameter]?.value ?? "")).join("|");
-}
-
-function loadExistingResults(filePath, variedParamRows) {
-  if (!filePath) return new Set();
-
-  const content = fs.readFileSync(filePath, "utf8");
-  const lines = content.trim().split("\n");
-
-  // Find the data header row — it contains "totalTrades"
-  let headerIdx = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes("totalTrades")) {
-      headerIdx = i;
-      break;
-    }
-  }
-
-  if (headerIdx === -1) {
-    console.warn(`Warning: could not find header row in ${filePath} — no runs will be skipped`);
-    return new Set();
-  }
-
-  const headers = parseCsvLine(lines[headerIdx]);
-  const paramIndices = variedParamRows.map((p) => headers.indexOf(p.parameter));
-
-  if (paramIndices.some((idx) => idx === -1)) {
-    console.warn("Warning: some parameters not found in resume file headers — no runs will be skipped");
-    return new Set();
-  }
-
-  const done = new Set();
-  for (let i = headerIdx + 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const cols = parseCsvLine(line);
-    const key = paramIndices.map((idx) => cols[idx] ?? "").join("|");
-    done.add(key);
-  }
-
-  return done;
-}
-
 function normalizeBool(value) {
   return String(value).trim().toLowerCase() === "true";
 }
 
 function hasValue(v) {
   return v !== undefined && v !== null && String(v).trim() !== "";
-}
-
-async function reconnectIfNeeded(page) {
-  const btn = page.locator(SELECTORS.reconnectButton);
-  if (await btn.count() > 0 && await btn.first().isVisible().catch(() => false)) {
-    console.log("Session disconnected — clicking Connect...");
-    await btn.first().click();
-    await btn.first().waitFor({ state: "hidden", timeout: 30000 });
-    console.log("Reconnected.");
-    await sleep(3000);
-    return true;
-  }
-  return false;
 }
 
 async function updateReportIfNeeded(page) {
@@ -132,20 +75,47 @@ async function updateReportIfNeeded(page) {
   if (await btn.count() > 0 && await btn.first().isVisible().catch(() => false)) {
     debugLog("Update report button found, clicking");
     await btn.first().click();
-    await sleep(6000);
+    await sleep(3000);
   } else {
     debugLog("No Update report button");
   }
 }
 
 async function setChartToLast30Days(page) {
-  debugLog("Opening chart range menu");
-  await page.locator(SELECTORS.chartRangeButton).click();
-  await sleep(800);
+  const selectorsToTry = [
+    SELECTORS.chartRangeButton,
+    '[data-name="chart-range"]',
+    'button[class*="range"]',
+    '[class*="rangeButton"]',
+    'div[class*="time-range"] button',
+  ];
+  let rangeButtonClicked = false;
+  for (const sel of selectorsToTry) {
+    try {
+      const loc = page.locator(sel).first();
+      if ((await loc.count()) > 0 && (await loc.isVisible().catch(() => false))) {
+        debugLog("Opening chart range menu with selector:", sel);
+        await loc.click({ timeout: 5000 });
+        rangeButtonClicked = true;
+        break;
+      }
+    } catch (_) {
+      continue;
+    }
+  }
+  if (!rangeButtonClicked) {
+    console.warn("[WARN] Could not find chart range button. Set the chart to 'Last 30 days' manually, then re-run.");
+    return;
+  }
+  await sleep(500);
 
-  debugLog("Selecting Last 30 days");
-  await page.locator(SELECTORS.last30DaysOption).click();
-  await sleep(5000);
+  try {
+    debugLog("Selecting Last 30 days");
+    await page.locator(SELECTORS.last30DaysOption).click({ timeout: 5000 });
+    await sleep(3000);
+  } catch (e) {
+    console.warn("[WARN] Could not select Last 30 days:", e.message);
+  }
 }
 
 async function readParamRanges() {
@@ -158,6 +128,7 @@ async function readParamRanges() {
           parameter: String(row.parameter || "").trim(),
           label: String(row.label || "").trim(),
           type: String(row.type || "").trim().toLowerCase(),
+          defaultValue: String(row.defaultValue || "").trim(),
           options: String(row.options || "").trim(),
           start: String(row.start || "").trim(),
           end: String(row.end || "").trim(),
@@ -183,7 +154,9 @@ function getValuesForParam(p) {
     if (hasValue(p.start) && hasValue(p.end) && hasValue(p.step)) {
       return buildValues(Number(p.start), Number(p.end), Number(p.step));
     }
-    if (hasValue(p.start)) return [p.start];
+    if (hasValue(p.defaultValue)) {
+      return [p.defaultValue];
+    }
     return [];
   }
 
@@ -191,7 +164,15 @@ function getValuesForParam(p) {
     if (hasValue(p.options)) {
       return p.options.split("|").map(v => v.trim()).filter(Boolean);
     }
-    if (hasValue(p.start)) return [p.start];
+    if (hasValue(p.start) && hasValue(p.end)) {
+      const s = String(p.start).trim().toLowerCase();
+      const e = String(p.end).trim().toLowerCase();
+      if (s !== e) return ["false", "true"];
+      return [s === "true" ? "true" : "false"];
+    }
+    if (hasValue(p.defaultValue)) {
+      return [p.defaultValue];
+    }
     return ["false"];
   }
 
@@ -199,7 +180,9 @@ function getValuesForParam(p) {
     if (hasValue(p.options)) {
       return p.options.split("|").map(v => v.trim()).filter(Boolean);
     }
-    if (hasValue(p.start)) return [p.start];
+    if (hasValue(p.defaultValue)) {
+      return [p.defaultValue];
+    }
     return [];
   }
 
@@ -236,15 +219,69 @@ function generateCombinations(paramRows) {
   return combos;
 }
 
-async function readStaticParams(allParamNames) {
+function filterCombinations(combos, paramRows) {
+  if (Object.keys(CONDITIONS).length === 0) return combos;
+
+  const defaults = {};
+  for (const p of paramRows) {
+    defaults[p.parameter] = p.defaultValue;
+  }
+
+  const seen = new Set();
+  const filtered = [];
+
+  for (const combo of combos) {
+    const normalized = {};
+    for (const [param, info] of Object.entries(combo)) {
+      normalized[param] = { ...info };
+    }
+
+    for (const [param, condition] of Object.entries(CONDITIONS)) {
+      if (!(param in normalized)) continue;
+      const dep = normalized[condition.dependsOn];
+      if (!dep) continue;
+      const depValue = String(dep.value).trim().toLowerCase();
+      const requiredValue = String(condition.requiredValue).trim().toLowerCase();
+      if (depValue !== requiredValue) {
+        normalized[param] = {
+          ...normalized[param],
+          value: defaults[param] ?? normalized[param].value,
+        };
+      }
+    }
+
+    const key = Object.keys(normalized)
+      .sort()
+      .map((k) => `${k}=${normalized[k].value}`)
+      .join("|");
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      filtered.push(normalized);
+    }
+  }
+
+  return filtered;
+}
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+async function readStaticParams(sweptParamNames) {
   return new Promise((resolve, reject) => {
     const rows = [];
     fs.createReadStream("params_template.csv")
       .pipe(csv())
       .on("data", (row) => {
         const name = String(row.parameter || "").trim();
-        if (name && !allParamNames.has(name)) {
-          rows.push({ parameter: name, value: String(row.start || "").trim() });
+        if (name && !sweptParamNames.has(name)) {
+          rows.push({ parameter: name, defaultValue: String(row.defaultValue || "").trim() });
         }
       })
       .on("end", () => resolve(rows))
@@ -252,34 +289,27 @@ async function readStaticParams(allParamNames) {
   });
 }
 
-async function readChartInfo(page) {
-  const asset = await page.locator(SELECTORS.assetName).first().innerText();
-  const timeframe = await page.locator(SELECTORS.timeframe).first().innerText();
-  return { asset: asset.trim(), timeframe: timeframe.trim() };
-}
-
-function ensureResultsHeader(paramRows, staticParams, chartInfo) {
-  const MAX_COLS = 14;
-  const pairs = staticParams.flatMap((p) => [csvEscape(p.parameter), csvEscape(p.value)]);
-  const staticRows = [];
-  for (let i = 0; i < pairs.length; i += MAX_COLS) {
-    staticRows.push(pairs.slice(i, i + MAX_COLS).join(","));
-  }
-  const staticSection = staticRows.join("\n");
-
-  const chartInfoRow = [csvEscape("asset"), csvEscape(chartInfo.asset), csvEscape("timeframe"), csvEscape(chartInfo.timeframe)].join(",");
+function ensureResultsHeader(paramRows, staticParams) {
+  const staticSection = staticParams
+    .map((p) => `${p.parameter}=${p.defaultValue}`)
+    .join(",");
 
   const header = [
     ...paramRows.map((p) => p.parameter),
-    "totalTrades",
     "netProfit",
     "maxDrawdown",
+    "totalTrades",
     "profitableTrades",
     "profitFactor",
   ].join(",");
 
-  fs.writeFileSync(RESULTS_FILE, chartInfoRow + "\n" + staticSection + "\n" + header + "\n");
+  fs.writeFileSync(RESULTS_FILE, staticSection + "\n" + header + "\n");
   debugLog(`Created results file: ${RESULTS_FILE}`);
+}
+
+function isClosedError(err) {
+  const msg = (err && err.message) ? String(err.message) : "";
+  return /target page, context or browser has been closed/i.test(msg) || /Target closed/i.test(msg);
 }
 
 async function waitForVisible(page, selector, name, timeout = 10000) {
@@ -290,25 +320,84 @@ async function waitForVisible(page, selector, name, timeout = 10000) {
 
 async function openStrategyInputs(page) {
   debugLog("Opening strategy context menu");
-  await waitForVisible(page, SELECTORS.strategyButton, "strategy button");
-  await page.click(SELECTORS.strategyButton);
+  const strategySelectors = [
+    SELECTORS.strategyButton,
+    "#\\:rp\\:",
+    "#\\:rn\\:",
+    '[data-name="strategy-tab"]',
+    '[class*="strategy"]',
+    'div[class*="tab"]:has-text("Strategy")',
+  ];
+  let clicked = false;
+  for (const sel of strategySelectors) {
+    try {
+      const loc = page.locator(sel).first();
+      if ((await loc.count()) > 0 && (await loc.isVisible().catch(() => false))) {
+        await loc.waitFor({ state: "visible", timeout: 5000 });
+        await loc.click();
+        clicked = true;
+        break;
+      }
+    } catch (_) {
+      continue;
+    }
+  }
+  if (!clicked) {
+    await waitForVisible(page, SELECTORS.strategyButton, "strategy button", 8000);
+    await page.click(SELECTORS.strategyButton);
+  }
   await sleep(1000);
 
+  const settingsSelectors = [
+    SELECTORS.settingsMenuItem,
+    "text=Settings…",
+    "text=Settings",
+    "[aria-label*='Settings']",
+    "[data-qa-id*='settings']",
+    "button:has-text('Settings')",
+    "div[role='menuitem']:has-text('Settings')",
+    "a:has-text('Settings')",
+    "[class*='menu']:has-text('Settings')",
+  ];
+
   debugLog("Clicking Settings menu item");
-  await waitForVisible(page, SELECTORS.settingsMenuItem, "Settings menu item");
-  await page.locator(SELECTORS.settingsMenuItem).first().click();
-  await sleep(1200);
+  let settingsClicked = false;
+  for (const sel of settingsSelectors) {
+    try {
+      const loc = page.locator(sel).first();
+      if ((await loc.count()) > 0 && (await loc.isVisible().catch(() => false))) {
+        await loc.waitFor({ state: "visible", timeout: 5000 });
+        await loc.click();
+        settingsClicked = true;
+        debugLog("Clicked settings with selector:", sel);
+        break;
+      }
+    } catch (_) {
+      continue;
+    }
+  }
+  if (!settingsClicked) {
+    try {
+      await page.getByText("Settings…", { exact: true }).click({ timeout: 15000 });
+      settingsClicked = true;
+    } catch (_) {}
+  }
+  if (!settingsClicked) {
+    await waitForVisible(page, SELECTORS.settingsMenuItem, "Settings menu item", 15000);
+    await page.locator(SELECTORS.settingsMenuItem).first().click();
+  }
+  await sleep(600);
 
   debugLog("Clicking Inputs tab");
   await waitForVisible(page, SELECTORS.inputsTab, "Inputs tab");
   await page.locator(SELECTORS.inputsTab).first().click();
-  await sleep(1200);
+  await sleep(600);
 }
 
 async function closeDropdown(page) {
   debugLog("Closing dropdown by clicking Inputs tab");
   await page.locator(SELECTORS.inputsTab).first().click();
-  await sleep(500);
+  await sleep(300);
 }
 
 function getStandardValueCell(page, label) {
@@ -342,11 +431,11 @@ async function setInputByLabel(page, label, value) {
   }
 
   await input.click();
-  await sleep(150);
-  await input.press("Meta+A");
   await sleep(100);
+  await input.press("Control+A");
+  await sleep(50);
   await input.fill(String(value));
-  await sleep(200);
+  await sleep(100);
 
   const finalValue = await input.inputValue();
   debugLog(`Final input value for "${label}": ${finalValue}`);
@@ -364,7 +453,7 @@ async function setCheckboxByLabel(page, label, value) {
 
     if (checked !== shouldCheck) {
       await embeddedRow.click();
-      await sleep(300);
+      await sleep(150);
     }
     return;
   }
@@ -377,7 +466,7 @@ async function setCheckboxByLabel(page, label, value) {
 
   if (checked !== shouldCheck) {
     await valueCell.click();
-    await sleep(300);
+    await sleep(150);
   }
 }
 
@@ -394,10 +483,10 @@ async function setSelectByLabel(page, label, value) {
   }
 
   await trigger.click();
-  await sleep(600);
+  await sleep(300);
 
   await page.getByText(String(value), { exact: true }).last().click();
-  await sleep(600);
+  await sleep(300);
 
   try {
     await closeDropdown(page);
@@ -419,14 +508,14 @@ async function applyCombo(page, combo) {
       await setSelectByLabel(page, param.label, param.value);
     }
 
-    await sleep(300);
+    await sleep(150);
   }
 
   debugLog("Clicking OK button");
   await page.locator(SELECTORS.okButton).click();
-  await sleep(2000);
+  await sleep(1000);
   await updateReportIfNeeded(page);
-  await sleep(3000);
+  await sleep(1500);
 }
 
 async function getMetricValue(page, title) {
@@ -448,7 +537,7 @@ async function readPerformanceSummary(page) {
   debugLog("Reading performance summary from page");
 
   await page.locator(".items-IJWxYDAe").first().waitFor({ state: "visible", timeout: 15000 });
-  await sleep(1500);
+  await sleep(800);
 
   return {
     netProfit: (await getMetricValue(page, "Total P&L")).replace(/^\+/, ""),
@@ -462,9 +551,9 @@ async function readPerformanceSummary(page) {
 function appendResult(combo, metrics, paramRows) {
   const row = [
     ...paramRows.map((p) => combo[p.parameter]?.value ?? ""),
-    metrics.totalTrades,
     metrics.netProfit,
     metrics.maxDrawdown,
+    metrics.totalTrades,
     metrics.profitableTrades,
     metrics.profitFactor,
   ].map(csvEscape);
@@ -487,20 +576,58 @@ async function main() {
   debugLog("Starting runner");
 
   const paramRows = await readParamRanges();
-  const allParamNames = new Set(paramRows.map((p) => p.parameter));
-  const variedParamRows = paramRows.filter((p) => getValuesForParam(p).length > 1);
-  const fixedParamRows = paramRows.filter((p) => getValuesForParam(p).length === 1);
-  const templateStaticParams = await readStaticParams(allParamNames);
-  const fixedFromParams = fixedParamRows.map((p) => ({ parameter: p.parameter, value: String(getValuesForParam(p)[0]) }));
-  const staticParams = [...fixedFromParams, ...templateStaticParams];
-  const combos = generateCombinations(paramRows);
+  const sweptNames = new Set(paramRows.map((p) => p.parameter));
+  const staticParams = await readStaticParams(sweptNames);
+
+  const allCombos = generateCombinations(paramRows);
+  console.log(`Total combinations (brute force): ${allCombos.length}`);
+
+  let combos = filterCombinations(allCombos, paramRows);
+  if (combos.length < allCombos.length) {
+    console.log(`After conditional filtering: ${combos.length} (eliminated ${allCombos.length - combos.length} redundant)`);
+  }
+
+  if (SAMPLE_SIZE && SAMPLE_SIZE < combos.length) {
+    combos = shuffleArray(combos).slice(0, SAMPLE_SIZE);
+    console.log(`Random sample mode: ${combos.length} combinations selected`);
+  }
+
+  let startIndex = 0;
+
+  if (RESUME_FILE) {
+    if (!fs.existsSync(RESUME_FILE)) {
+      console.error(`Resume file not found: ${RESUME_FILE}`);
+      process.exit(1);
+    }
+    RESULTS_FILE = RESUME_FILE;
+    const existingLines = fs.readFileSync(RESUME_FILE, "utf8").trim().split("\n");
+    startIndex = Math.max(0, existingLines.length - 2);
+    console.log(`Resuming from run ${startIndex + 1} (${startIndex} already completed in ${RESUME_FILE})`);
+  } else {
+    ensureResultsHeader(paramRows, staticParams);
+  }
+
+  const remaining = combos.length - startIndex;
+  if (remaining <= 0) {
+    console.log("All combinations already completed. Nothing to do.");
+    return;
+  }
+
+  const estSeconds = remaining * 8;
+  console.log(`Runs remaining: ${remaining} | Estimated time: ~${formatDuration(estSeconds)}`);
 
   debugLog("Launching browser. Headless = false");
   const browser = await chromium.launch({ headless: false });
 
-  debugLog(`Creating browser context with auth file: ${AUTH_FILE}`);
+  const hasAuth = fs.existsSync(AUTH_FILE);
+  if (hasAuth) {
+    debugLog(`Creating browser context with auth file: ${AUTH_FILE}`);
+  } else {
+    console.log(`No ${AUTH_FILE} found. Running without saved session (you may need to log in in the browser).`);
+    console.log(`To save a session for next time, run: node save-session.js`);
+  }
   const context = await browser.newContext({
-    storageState: AUTH_FILE,
+    ...(hasAuth && { storageState: AUTH_FILE }),
     acceptDownloads: true,
   });
 
@@ -508,56 +635,74 @@ async function main() {
 
   debugLog(`Navigating to chart: ${CHART_URL}`);
   await page.goto(CHART_URL, { waitUntil: "domcontentloaded" });
-  await sleep(5000);
+  await sleep(4000);
   await setChartToLast30Days(page);
-  await sleep(5000);
+  await sleep(3000);
   await updateReportIfNeeded(page);
 
-  const chartInfo = await readChartInfo(page);
-  debugLog(`Chart info: asset=${chartInfo.asset}, timeframe=${chartInfo.timeframe}`);
-  if (!RESUME_FILE) ensureResultsHeader(variedParamRows, staticParams, chartInfo);
+  console.log(`\nStarting ${remaining} runs...\n`);
 
-  const existingResults = loadExistingResults(RESUME_FILE, variedParamRows);
-  if (RESUME_FILE) console.log(`Resuming from ${RESUME_FILE} — ${existingResults.size} existing result(s) will be skipped`);
+  const runStart = Date.now();
+  let successCount = 0;
+  let failCount = 0;
 
-  console.log(`Total combinations: ${combos.length}`);
-
-  for (let i = 0; i < combos.length; i++) {
+  for (let i = startIndex; i < combos.length; i++) {
     const combo = combos[i];
     const runId = i + 1;
+    const runNum = i - startIndex + 1;
 
-    if (existingResults.has(comboKey(combo, variedParamRows))) {
-      debugLog(`Skipping run ${runId} — already in results`);
-      continue;
-    }
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        if (attempt === 1) {
+          console.log(`Run ${runId}/${combos.length} (${runNum}/${remaining})`);
+        } else {
+          console.log(`Run ${runId}/${combos.length} (retry)`);
+        }
+        debugLog("Current combo:", combo);
 
-    try {
-      console.log(`Run ${runId}/${combos.length}`);
-      debugLog("Current combo:", combo);
+        await applyCombo(page, combo);
 
-      await reconnectIfNeeded(page);
-      await applyCombo(page, combo);
+        const metrics = await readPerformanceSummary(page);
+        appendResult(combo, metrics, paramRows);
 
-      const metrics = await readPerformanceSummary(page);
-      appendResult(combo, metrics, variedParamRows);
+        successCount++;
 
-      console.log(`Saved run ${runId}`);
-      await sleep(1000);
-    } catch (err) {
-      console.error(`Run ${runId} failed: ${err.message}`);
-      debugLog(err.stack);
-      await saveFailureArtifacts(page, runId);
+        const elapsed = (Date.now() - runStart) / 1000;
+        const rate = runNum / elapsed;
+        const left = Math.max(0, (remaining - runNum) / rate);
+        console.log(`  [OK] ${formatDuration(elapsed)} elapsed | ETA ${formatDuration(left)}`);
 
-      const reconnected = await reconnectIfNeeded(page);
-      if (reconnected) {
-        console.log(`Retrying run ${runId} after reconnect...`);
-        i--;  // re-run this combo on next iteration
+        await sleep(500);
+        break;
+      } catch (err) {
+        if (isClosedError(err)) {
+          console.error("\nBrowser or tab was closed. Results so far are in: " + RESULTS_FILE);
+          console.error(`Resume later with: node runner.js --resume ${RESULTS_FILE}`);
+          try { await browser.close(); } catch (_) {}
+          process.exit(1);
+        }
+
+        if (attempt === 1) {
+          console.warn(`  [RETRY] Attempt 1 failed: ${err.message}`);
+          debugLog(err.stack);
+          await sleep(2000);
+          continue;
+        }
+
+        console.error(`  [FAIL] Run ${runId} failed after retry: ${err.message}`);
+        debugLog(err.stack);
+        failCount++;
+        try {
+          if (!page.isClosed()) await saveFailureArtifacts(page, runId);
+        } catch (_) {}
       }
     }
   }
 
-  debugLog("Closing browser");
-  await browser.close();
+  console.log(`\nFinished. ${successCount} succeeded, ${failCount} failed.`);
+  console.log(`Results saved to: ${RESULTS_FILE}`);
+
+  try { await browser.close(); } catch (_) {}
   debugLog("Runner finished");
 }
 

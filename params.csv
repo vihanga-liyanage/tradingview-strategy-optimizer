@@ -1,5 +1,15 @@
-parameter,label,type,options,start,end,step
-tickTPDistance,📏 Tick TP Distance,numeric,,30,30,5
-stopLossMode,🛑 Stop Loss Mode,select,Trailing SL,Trailing SL,Trailing SL,0
-fixedSLDistanceTicks,📏 Fixed SL Distance (Ticks),numeric,,30,50,10
-enableDailyLimits,💵 Enable Daily Limits,checkbox,false,false,false,1
+parameter,label,type,defaultValue,options,start,end,step
+tickTPDistance,📏 Tick TP Distance,numeric,16,,10,30,8
+stopLossMode,🛑 Stop Loss Mode,select,Trailing SL,Trailing SL|Fixed Tick SL,,,
+fixedSLDistanceTicks,📏 Fixed SL Distance (Ticks),numeric,180,,100,200,20
+trailTriggerTicks,🎯 Trail Trigger (Ticks),numeric,15,,10,20,5
+trailStepSizeTicks,📊 Trail Step Size (Ticks),numeric,15,,10,20,5
+enableMAXTP,🚀 Enable MAX TP,checkbox,false,false|true,,,
+enableTPProtection,🛡️ Enable TP Protection,checkbox,false,false|true,,,
+enableTickTP,🎯 Enable Tick TP,checkbox,true,false|true,,,
+useMomentumFilter,🚀 Use Momentum Filter,checkbox,true,false|true,,,
+enableHTFSentiment,🧭 Enable HTF Sentiment,checkbox,true,false|true,,,
+useRestingExits,Use Resting Exits,checkbox,true,false|true,,,
+basisLength,Basis Length,numeric,16,,8,60,8
+includeNYSession,🌅 Include NY Session,checkbox,true,false|true,,,
+includeOvernightSession,🌙 Include Overnight Session,checkbox,true,false|true,,,

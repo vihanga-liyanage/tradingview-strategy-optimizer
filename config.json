@@ -9,7 +9,8 @@
     "last30DaysOption": "text=\"Last 30 days\"",
     "updateReportButton": "button[data-qa-id=\"ui-lib-snackbar-action-button\"]",
     "assetName": "button[aria-label='Change symbol']",
-    "timeframe": "button[aria-label='Change interval']"
+    "timeframe": "button[aria-label='Change interval']",
+    "reconnectButton": "button[data-overflow-tooltip-text='Connect']"
   },
   "skipLabels": [
     "🌍 Your Timezone",

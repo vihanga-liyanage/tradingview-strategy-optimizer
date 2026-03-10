@@ -48,6 +48,19 @@ function hasValue(v) {
   return v !== undefined && v !== null && String(v).trim() !== "";
 }
 
+async function reconnectIfNeeded(page) {
+  const btn = page.locator(SELECTORS.reconnectButton);
+  if (await btn.count() > 0 && await btn.first().isVisible().catch(() => false)) {
+    console.log("Session disconnected — clicking Connect...");
+    await btn.first().click();
+    await btn.first().waitFor({ state: "hidden", timeout: 30000 });
+    console.log("Reconnected.");
+    await sleep(3000);
+    return true;
+  }
+  return false;
+}
+
 async function updateReportIfNeeded(page) {
   debugLog("Checking for Update report button");
 
@@ -451,6 +464,7 @@ async function main() {
       console.log(`Run ${runId}/${combos.length}`);
       debugLog("Current combo:", combo);
 
+      await reconnectIfNeeded(page);
       await applyCombo(page, combo);
 
       const metrics = await readPerformanceSummary(page);
@@ -462,6 +476,12 @@ async function main() {
       console.error(`Run ${runId} failed: ${err.message}`);
       debugLog(err.stack);
       await saveFailureArtifacts(page, runId);
+
+      const reconnected = await reconnectIfNeeded(page);
+      if (reconnected) {
+        console.log(`Retrying run ${runId} after reconnect...`);
+        i--;  // re-run this combo on next iteration
+      }
     }
   }
 

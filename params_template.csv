@@ -23,7 +23,7 @@ billyReferenceSLTicks,🔫 Billy Reference SL (Ticks),numeric,,300,300,1
 bBEMALength,📊 BB EMA Length,numeric,,9,9,1
 bBSMALength,📊 BB SMA Length,numeric,,20,20,1
 bBStdDevMultiplier,📊 BB StdDev Multiplier,numeric,,4,4,1
-hTFSentimentTimeframe,🧭 HTF Sentiment Timeframe,select,,15 minutes,15 minutes,1
+hTFSentimentTimeframe,🧭 HTF Sentiment Timeframe,select,15 minutes|30 minutes|45 minutes|1 hour|2 hours|3 hours|4 hours,15 minutes,15 minutes,1
 outputSmoothing,🧭 Output Smoothing,numeric,,29,29,1
 triggerSmoothing,🧭 Trigger Smoothing,numeric,,11,11,1
 aTRLength,🧭 ATR Length,numeric,,200,200,1
@@ -37,7 +37,6 @@ maxLevels,📊 Max Levels,numeric,,5,5,1
 minStrength,📊 Min Strength,numeric,,2,2,1
 positionSize,📊 Position Size,numeric,,2,2,1
 multiplier,📊 Multiplier,numeric,,2,2,1
-maxLevels,🔢 Max Levels,numeric,,3,3,1
 maxTradesPerSession,📊 Max Trades Per Session,numeric,,5,5,1
 cooldownCandles,❄️ Cooldown Candles,numeric,,3,3,1
 dailyProfitTarget,📈 Daily Profit Target ($),numeric,,700,700,1

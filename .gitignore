@@ -140,3 +140,4 @@ vite.config.ts.timestamp-*
 
 auth.json
 results/
+results_*.csv

@@ -1,9 +1,13 @@
 {
   "name": "trading-view-strategy-optimizer",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "electron/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron .",
+    "start:cli": "node runner.js",
+    "extract": "node extract-params.js",
+    "login": "node save-session.js",
+    "build:win": "electron-builder --win portable"
   },
   "keywords": [],
   "author": "",
@@ -13,5 +17,27 @@
     "csv-parser": "^3.2.0",
     "csv-writer": "^1.6.0",
     "playwright": "^1.58.2"
+  },
+  "devDependencies": {
+    "electron": "^41.0.0",
+    "electron-builder": "^26.8.1"
+  },
+  "build": {
+    "appId": "com.rootkits.tvoptimizer",
+    "productName": "TV Strategy Optimizer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*",
+      "runner.js",
+      "extract-params.js",
+      "save-session.js",
+      "config.json",
+      "params.csv",
+      "params_template.csv",
+      "learning_state.json",
+      "package.json"
+    ]
   }
 }

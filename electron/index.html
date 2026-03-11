@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TradingView Strategy Optimizer</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>TradingView Strategy Optimizer</h1>
+    <p>Desktop runner for your existing automation engine</p>
+  </header>
+
+  <main class="layout">
+    <section class="panel controls">
+      <h2>Project Setup</h2>
+      <label>
+        TradingView Chart URL
+        <input id="chartUrl" type="text" placeholder="https://www.tradingview.com/chart/..." />
+      </label>
+      <div class="actions">
+        <button id="saveChartBtn">Save Chart URL</button>
+      </div>
+
+      <h2>Run Controls</h2>
+      <label>
+        Sample Size
+        <input id="sampleSize" type="number" min="1" placeholder="e.g. 200" />
+      </label>
+      <label>
+        Resume Results File (optional)
+        <input id="resumeFile" type="text" placeholder="results_YYYY-MM-DD_HH-MM-SS.csv" />
+      </label>
+      <label class="inline">
+        <input id="noAdaptive" type="checkbox" />
+        Disable adaptive mode
+      </label>
+      <label class="inline">
+        <input id="wipeMemory" type="checkbox" />
+        Wipe memory at start
+      </label>
+      <div class="actions">
+        <button id="startBtn" class="primary">Start</button>
+        <button id="stopBtn" class="danger">Stop</button>
+      </div>
+      <div class="status">
+        <strong>Status:</strong>
+        <span id="statusText">Checking...</span>
+      </div>
+    </section>
+
+    <section class="panel setup-main">
+      <div class="param-header">
+        <h2>Parameter Builder (from params_template.csv)</h2>
+        <div class="actions">
+          <button id="saveParamsBtn" class="primary">Save Selected To params.csv</button>
+        </div>
+      </div>
+      <p class="helper">Toggle only the parameters you want to optimize. Numeric supports single value, range, or list (example: <code>20|30|40</code>).</p>
+      <div id="paramList" class="param-list"></div>
+
+      <section class="panel subpanel">
+        <div class="param-header">
+          <h2>Setup Assistant (README flow)</h2>
+        </div>
+        <p class="helper">Run the setup steps here in order: install browser, save session, extract template.</p>
+        <div class="actions wrap">
+          <button id="installChromiumBtn">1) Install Chromium</button>
+          <button id="saveSessionBtn">2) Save TradingView Session</button>
+          <button id="sendEnterBtn">Press Enter For Save Session</button>
+          <button id="extractParamsBtn">3) Extract params_template.csv</button>
+          <button id="stopSetupBtn" class="danger">Stop Setup Task</button>
+        </div>
+      </section>
+
+      <section class="panel subpanel">
+        <div class="param-header">
+          <h2>Results Center</h2>
+          <div class="actions">
+            <button id="refreshResultsBtn">Refresh</button>
+          </div>
+        </div>
+        <div id="resultsList" class="results-list"></div>
+      </section>
+
+      <section class="logs embedded-logs">
+        <div class="log-header">
+          <h2>Live Logs</h2>
+          <button id="clearLogsBtn">Clear</button>
+        </div>
+        <pre id="logs"></pre>
+      </section>
+    </section>
+  </main>
+
+  <script src="./renderer.js"></script>
+</body>
+</html>

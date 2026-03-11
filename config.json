@@ -1,16 +1,13 @@
 {
-  "chartUrl": "https://www.tradingview.com/chart/cNrWS3nV/",
+  "chartUrl": "https://www.tradingview.com/chart/J5nrZcp8/",
   "selectors": {
-    "strategyButton": "button[data-strategy-title]",
+    "strategyButton": "#\\:rp\\:",
     "settingsMenuItem": "text=Settings…",
     "inputsTab": "text=Inputs",
     "okButton": "button:has-text('OK')",
-    "chartRangeButton": "button[aria-controls][aria-haspopup='menu']:not([data-strategy-title]):not([aria-label]):not([data-name])",
+    "chartRangeButton": "#\\:rr\\:",
     "last30DaysOption": "text=\"Last 30 days\"",
-    "updateReportButton": "button[data-qa-id=\"ui-lib-snackbar-action-button\"]",
-    "assetName": "button[aria-label='Change symbol']",
-    "timeframe": "button[aria-label='Change interval']",
-    "reconnectButton": "button[data-overflow-tooltip-text='Connect']"
+    "updateReportButton": "button[data-qa-id=\"ui-lib-snackbar-action-button\"]"
   },
   "skipLabels": [
     "🌍 Your Timezone",
@@ -19,6 +16,7 @@
     "⏰ Blackout 3 Times",
     "⏰ Blackout 4 Times",
     "⏰ Blackout 5 Times",
+    "💵 Enable Daily Limits",
     "🟢 Profit Label Color",
     "🔴 Loss Label Color",
     "⚪ Label Text Color",
@@ -29,5 +27,20 @@
     "📅 Backtest Start",
     "📅 Backtest End",
     "ℹ️ Version"
-  ]
+  ],
+  "conditions": {
+    "fixedSLDistanceTicks": { "dependsOn": "stopLossMode", "requiredValue": "Fixed Tick SL" },
+    "trailTriggerTicks": { "dependsOn": "stopLossMode", "requiredValue": "Trailing SL" },
+    "trailStepSizeTicks": { "dependsOn": "stopLossMode", "requiredValue": "Trailing SL" },
+    "tickTPDistance": { "dependsOn": "enableTickTP", "requiredValue": "true" },
+    "enableFastTP": { "dependsOn": "enableMAXTP", "requiredValue": "true" },
+    "enableTPProtection": { "dependsOn": "enableMAXTP", "requiredValue": "true" },
+    "hTFSentimentTimeframe": { "dependsOn": "enableHTFSentiment", "requiredValue": "true" },
+    "outputSmoothing": { "dependsOn": "enableHTFSentiment", "requiredValue": "true" },
+    "triggerSmoothing": { "dependsOn": "enableHTFSentiment", "requiredValue": "true" },
+    "aTRLength": { "dependsOn": "enableHTFSentiment", "requiredValue": "true" },
+    "rangeMultiplier": { "dependsOn": "enableHTFSentiment", "requiredValue": "true" },
+    "rangeStyle": { "dependsOn": "enableHTFSentiment", "requiredValue": "true" },
+    "doubleFilter": { "dependsOn": "enableHTFSentiment", "requiredValue": "true" }
+  }
 }

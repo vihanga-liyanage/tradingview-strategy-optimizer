@@ -1,7 +1,10 @@
 const fs = require("fs");
 const { chromium } = require("playwright");
 
-const { chartUrl: CHART_URL, skipLabels: SKIP_LABELS, selectors: SELECTORS } = JSON.parse(fs.readFileSync("config.json", "utf8"));
+const config = JSON.parse(fs.readFileSync("config.json", "utf8"));
+const CHART_URL = config.chartUrl;
+const SKIP_LABELS = config.skipLabels || [];
+const SELECTORS = config.selectors || {};
 const AUTH_FILE = "auth.json";
 const OUTPUT_FILE = "params_template.csv";
 
@@ -17,27 +20,85 @@ function sleep(ms) {
 
 async function openStrategyInputs(page) {
   debugLog("Clicking strategy button");
-  await page.locator(SELECTORS.strategyButton).click();
+  const strategySelectors = [
+    SELECTORS.strategyButton,
+    "#\\:rp\\:",
+    "#\\:rn\\:",
+    '[data-name="strategy-tab"]',
+    '[class*="strategy"]',
+    'div[class*="tab"]:has-text("Strategy")',
+  ];
+
+  let clicked = false;
+  for (const sel of strategySelectors) {
+    if (!sel) continue;
+    try {
+      const loc = page.locator(sel).first();
+      if ((await loc.count()) > 0 && (await loc.isVisible().catch(() => false))) {
+        await loc.click();
+        clicked = true;
+        debugLog("Clicked strategy with selector:", sel);
+        break;
+      }
+    } catch (_) {
+      continue;
+    }
+  }
+  if (!clicked) {
+    await page.click("#\\:rp\\:");
+  }
   await sleep(1000);
 
   debugLog("Clicking Settings");
-  await page.locator(SELECTORS.settingsMenuItem).click();
+  const settingsSelectors = [
+    SELECTORS.settingsMenuItem,
+    "text=Settings…",
+    "text=Settings",
+    "div[role='menuitem']:has-text('Settings')",
+    "button:has-text('Settings')",
+  ];
+
+  let settingsClicked = false;
+  for (const sel of settingsSelectors) {
+    if (!sel) continue;
+    try {
+      const loc = page.locator(sel).first();
+      if ((await loc.count()) > 0 && (await loc.isVisible().catch(() => false))) {
+        await loc.click();
+        settingsClicked = true;
+        debugLog("Clicked settings with selector:", sel);
+        break;
+      }
+    } catch (_) {
+      continue;
+    }
+  }
+  if (!settingsClicked) {
+    await page.getByText("Settings…", { exact: true }).click();
+  }
   await sleep(1200);
 
   debugLog("Clicking Inputs");
-  await page.locator(SELECTORS.inputsTab).click();
+  const inputsSelectors = [SELECTORS.inputsTab, "text=Inputs"];
+  for (const sel of inputsSelectors) {
+    if (!sel) continue;
+    try {
+      const loc = page.locator(sel).first();
+      if ((await loc.count()) > 0 && (await loc.isVisible().catch(() => false))) {
+        await loc.click();
+        break;
+      }
+    } catch (_) {
+      continue;
+    }
+  }
   await sleep(1500);
 }
 
 async function closeDropdown(page) {
   debugLog("Closing dropdown by clicking Inputs tab");
-  await page.locator(SELECTORS.inputsTab).click();
-  await sleep(500);
-}
-
-async function closeDropdown(page) {
-  debugLog("Closing dropdown by clicking Inputs tab");
-  await page.locator(SELECTORS.inputsTab).click();
+  const sel = SELECTORS.inputsTab || "text=Inputs";
+  await page.locator(sel).first().click();
   await sleep(500);
 }
 
@@ -47,7 +108,6 @@ async function extractParams(page) {
   const results = [];
   const seenLabels = new Set();
 
-  // Pass 1: standard rows
   const labelNodes = page.locator("div.cell-RLntasnw.first-RLntasnw div.inner-RLntasnw");
   const labelCount = await labelNodes.count();
 
@@ -153,8 +213,8 @@ async function extractParams(page) {
         parameter,
         label,
         type,
+        defaultValue: value,
         options,
-        start: value,
       });
 
       seenLabels.add(label);
@@ -167,7 +227,6 @@ async function extractParams(page) {
     }
   }
 
-  // Pass 2: embedded checkbox rows
   const checkboxRows = page.locator('label.checkbox-Lah5SRBd');
   const checkboxCount = await checkboxRows.count();
 
@@ -212,8 +271,8 @@ async function extractParams(page) {
         parameter,
         label,
         type: "checkbox",
+        defaultValue: value,
         options: "",
-        start: value,
       });
 
       seenLabels.add(label);
@@ -227,7 +286,7 @@ async function extractParams(page) {
 }
 
 function writeCsv(rows) {
-  const lines = ["parameter,label,type,options,start,end,step"];
+  const lines = ["parameter,label,type,defaultValue,options,start,end,step"];
 
   for (const row of rows) {
     lines.push(
@@ -235,16 +294,17 @@ function writeCsv(rows) {
         csvEscape(row.parameter),
         csvEscape(row.label),
         csvEscape(row.type),
+        csvEscape(row.defaultValue),
         csvEscape(row.options || ""),
-        csvEscape(row.start),
-        csvEscape(row.start),
+        csvEscape(row.defaultValue),
+        csvEscape(row.defaultValue),
         csvEscape("1")
       ].join(",")
     );
   }
 
   fs.writeFileSync(OUTPUT_FILE, lines.join("\n"));
-  console.log(`Saved ${OUTPUT_FILE}`);
+  console.log(`Saved ${OUTPUT_FILE} (${rows.length} parameters)`);
 }
 
 function csvEscape(value) {
@@ -257,8 +317,12 @@ function csvEscape(value) {
 
 (async () => {
   const browser = await chromium.launch({ headless: false });
+  const hasAuth = fs.existsSync(AUTH_FILE);
+  if (!hasAuth) {
+    console.log(`No ${AUTH_FILE} found. You may need to log in in the browser. Run 'node save-session.js' to save a session for next time.`);
+  }
   const context = await browser.newContext({
-    storageState: AUTH_FILE
+    ...(hasAuth && { storageState: AUTH_FILE }),
   });
 
   const page = await context.newPage();

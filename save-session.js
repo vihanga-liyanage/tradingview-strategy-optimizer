@@ -1,4 +1,5 @@
 const fs = require("fs");
+const readline = require("readline");
 const { chromium } = require("playwright");
 
 const { chartUrl: CHART_URL } = JSON.parse(fs.readFileSync("config.json", "utf8"));
@@ -10,10 +11,12 @@ const { chartUrl: CHART_URL } = JSON.parse(fs.readFileSync("config.json", "utf8"
 
   await page.goto(CHART_URL);
 
-  console.log("Login to TradingView, then press ENTER here...");
-  process.stdin.once("data", async () => {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  rl.question("Login to TradingView, then press ENTER here... ", async () => {
+    rl.close();
     await context.storageState({ path: "auth.json" });
     await browser.close();
-    process.exit();
+    console.log("Session saved to auth.json");
+    process.exit(0);
   });
 })();

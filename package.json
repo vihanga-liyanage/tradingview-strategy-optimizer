@@ -1,0 +1,19 @@
+{
+  "name": "trading-view-strategy-optimizer",
+  "version": "1.0.0",
+  "main": "runner.js",
+  "scripts": {
+    "start": "node runner.js",
+    "extract": "node extract-params.js",
+    "login": "node save-session.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "csv-parser": "^3.2.0",
+    "csv-writer": "^1.6.0",
+    "playwright": "^1.58.2"
+  }
+}

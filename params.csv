@@ -1,0 +1,14 @@
+parameter,label,type,defaultValue,options,start,end,step
+tickTPDistance,📏 Tick TP Distance,numeric,16,,10,30,8
+stopLossMode,🛑 Stop Loss Mode,select,Trailing SL,Trailing SL|Fixed Tick SL,,,
+fixedSLDistanceTicks,📏 Fixed SL Distance (Ticks),numeric,180,,100,200,20
+trailTriggerTicks,🎯 Trail Trigger (Ticks),numeric,15,,10,20,5
+trailStepSizeTicks,📊 Trail Step Size (Ticks),numeric,15,,10,20,5
+enableMAXTP,🚀 Enable MAX TP,checkbox,false,false|true,,,
+enableTPProtection,🛡️ Enable TP Protection,checkbox,false,false|true,,,
+enableTickTP,🎯 Enable Tick TP,checkbox,true,false|true,,,
+useMomentumFilter,🚀 Use Momentum Filter,checkbox,true,false|true,,,
+enableHTFSentiment,🧭 Enable HTF Sentiment,checkbox,true,false|true,,,
+fibRatio,Fib Ratio,numeric,1.3,,1.2,2.0,0.2
+minTicksFromTP,Min Ticks From TP,numeric,2,,1,5,2
+entryFibAdjust,Entry Fib Adjust,numeric,0.9,,0.5,1.5,0.1

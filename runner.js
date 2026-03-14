@@ -1,4 +1,5 @@
 const fs = require("fs");
+const readline = require("readline");
 const csv = require("csv-parser");
 const { chromium } = require("playwright");
 
@@ -24,6 +25,16 @@ function getTimestamp() {
 const RESULTS_DIR = "results";
 if (!fs.existsSync(RESULTS_DIR)) fs.mkdirSync(RESULTS_DIR);
 const RESULTS_FILE = RESUME_FILE || `${RESULTS_DIR}/results_${getTimestamp()}.csv`;
+
+function confirm(question) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase());
+    });
+  });
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -393,10 +404,17 @@ async function setSelectByLabel(page, label, value) {
     throw new Error(`No select trigger found for label: ${label}`);
   }
 
-  await trigger.click();
-  await sleep(600);
+  const option = page.getByText(String(value), { exact: true }).last();
 
-  await page.getByText(String(value), { exact: true }).last().click();
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await trigger.click();
+    await sleep(800);
+    if (await option.isVisible().catch(() => false)) break;
+    debugLog(`Select dropdown did not open on attempt ${attempt}, retrying...`);
+  }
+
+  await option.waitFor({ state: "visible", timeout: 5000 });
+  await option.click();
   await sleep(600);
 
   try {
@@ -494,6 +512,20 @@ async function main() {
   const fixedFromParams = fixedParamRows.map((p) => ({ parameter: p.parameter, value: String(getValuesForParam(p)[0]) }));
   const staticParams = [...fixedFromParams, ...templateStaticParams];
   const combos = generateCombinations(paramRows);
+  const existingResults = loadExistingResults(RESUME_FILE, variedParamRows);
+  const pendingCount = combos.filter((c) => !existingResults.has(comboKey(c, variedParamRows))).length;
+
+  console.log(`Total combinations: ${combos.length}`);
+  if (RESUME_FILE) console.log(`Already completed: ${existingResults.size} — runs remaining: ${pendingCount}`);
+  if (pendingCount === 0) {
+    console.log("Nothing to run.");
+    process.exit(0);
+  }
+  const answer = await confirm("Proceed? [y/N] ");
+  if (answer !== "y") {
+    console.log("Aborted.");
+    process.exit(0);
+  }
 
   debugLog("Launching browser. Headless = false");
   const browser = await chromium.launch({ headless: false });
@@ -516,11 +548,6 @@ async function main() {
   const chartInfo = await readChartInfo(page);
   debugLog(`Chart info: asset=${chartInfo.asset}, timeframe=${chartInfo.timeframe}`);
   if (!RESUME_FILE) ensureResultsHeader(variedParamRows, staticParams, chartInfo);
-
-  const existingResults = loadExistingResults(RESUME_FILE, variedParamRows);
-  if (RESUME_FILE) console.log(`Resuming from ${RESUME_FILE} — ${existingResults.size} existing result(s) will be skipped`);
-
-  console.log(`Total combinations: ${combos.length}`);
 
   for (let i = 0; i < combos.length; i++) {
     const combo = combos[i];
